@@ -196,7 +196,7 @@ class Interface(object):
         else:
             kwargs = self._connect_extras
         
-        kwargs['disable_ssl_certificate_validation'] = True
+        # kwargs['disable_ssl_certificate_validation'] = True
 
         if DEBUG:   
             httplib2.debuglevel = 2
