@@ -59,8 +59,7 @@ def uri_segment(uri, start=None, end=None):
     else:
         return '/'+'/'.join(uri.split('/')[start:end])
 
-def uri_shape(uri):
-    
+def uri_kwid_map(uri):
     kwid_map = dict(zip(uri.split('/')[1::2], uri.split('/')[2::2]))
     shapes = {}
 
@@ -80,9 +79,11 @@ def uri_shape(uri):
         
                 chunks.append(chunk)
 
-            shapes[kw] = '?'.join(chunks) 
-    
-    return make_uri(shapes)
+            shapes[kw] = '?'.join(chunks)
+    return shapes
+
+def uri_shape(uri):
+    return make_uri(uri_kwid_map(uri))
 
 def make_uri(_dict):
     uri = ''
@@ -103,27 +104,3 @@ def check_entry(func):
         return func(*args, **kwargs)
 
     return inner
-
-
-def extract_uri(uri) :
-    """
-    Destructure the given REST uri into project,subject and experiment.
-
-    Returns None if any one of project,subject or experiment is unspecified in the URI and a
-    (project,subject,experiment) triple otherwise.
-    """
-    split = uri.split(os.sep)
-    # a well qualified uri has a project subject, and experiment name
-    # so when split the following items should be present:
-    # ['', 'data', 'projects', 'project-name', 'subjects', 'subject-name', 'experiments', 'experiment-name', 'scans']
-    
-    # Based on the above comment if there aren't 9 items in the split list the uri isn't well qualified
-    if (len(split) != 9): return None
-
-    project = split[3]
-    subject = split[5]
-    experiment = split[7]
-
-    return (project,subject,experiment)
-
-

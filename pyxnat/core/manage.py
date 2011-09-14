@@ -1,6 +1,8 @@
 import re
 import glob
 import urllib
+import httplib
+import mimetypes
 
 from lxml import etree
 
@@ -11,6 +13,7 @@ from .tags import Tags
 from .uriutil import join_uri, check_entry
 from .jsonutil import JsonTable
 from . import httputil
+
 
 
 class GlobalManager(object):
@@ -319,3 +322,14 @@ class PreArchive(object):
             ).where(
             project=triple[0], timestamp=triple[1], folderName=triple[2]
             ).get('url')
+    
+    def upload(self,f,triple):
+        request_uri = '/data/services/import?project=' + triple[0] + '&'
+        request_uri += 'subject=' + triple[1] + '&'
+        request_uri += 'session=' + triple[2] + '&'
+        request_uri += 'autoarchive=true' + '&'
+        request_uri += 'inbody=true' + '&'
+        request_uri += 'overwrite=append'
+        ctype = {'content-type' : 'application/zip'}
+        file = open(f,'r').read()
+        self._intf._exec(request_uri, 'POST', file , ctype)

@@ -653,6 +653,7 @@ class Search(object):
         self._columns = columns
         self._intf = interface
 
+        
     def where(self, constraints=None, template=None, query=None):
         """ Triggers the search.
 

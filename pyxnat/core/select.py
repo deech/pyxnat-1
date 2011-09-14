@@ -2,7 +2,7 @@ import re
 
 from . import schema
 from .search import Search
-from .resources import CObject, Project, Projects # imports used implicitly
+from .resources import CObject, Project, Projects, Experiments, Experiment # imports used implicitly
 from .uriutil import inv_translate_uri, check_entry
 # from .uriutil import uri_last
 from .errors import ProgrammingError
@@ -254,6 +254,33 @@ class Select(object):
 
         return globals()['Projects'](
             '%s/projects' % self._intf._entry, self._intf, id_filter)
+
+    def experiments(self, id_filter='*'):
+        """ Returns the list of all visible projects for the server.
+
+            Parameters
+            ----------
+            id_filter: string
+                Name pattern to filter the returned projects.
+        """
+        self._intf._get_entry_point()
+
+        return globals()['Experiments'](
+            '%s/experiments' % self._intf._entry, self._intf, id_filter)
+
+    
+    def experiment(self, ID):
+        """ Returns the list of all visible projects for the server.
+
+            Parameters
+            ----------
+            id_filter: string
+                Name pattern to filter the returned projects.
+        """
+        self._intf._get_entry_point()
+
+        return globals()['Experiment'](
+            '%s/experiments/%s' % (self._intf._entry,ID), self._intf)
 
     def tag(self, name):
         self._intf._get_entry_point()

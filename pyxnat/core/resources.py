@@ -19,6 +19,7 @@ from .uriutil import join_uri, translate_uri, uri_segment
 from .uriutil import uri_last, uri_nextlast
 from .uriutil import uri_parent, uri_grandparent
 from .uriutil import uri_shape
+from .schema import class_name
 
 from .jsonutil import JsonTable, get_selection
 from .pathutil import find_files
@@ -40,7 +41,6 @@ def get_element_from_element(rsc_name):
 
     def getter(self, ID):
         Element = globals()[rsc_name.title()]
-
         return Element(join_uri(self._uri, rsc_name + 's', ID), self._intf)
 
     return getter
@@ -161,7 +161,7 @@ class EObject(object):
                       )
 
         get_id = p_uri + '?format=json&columns=%s' % ','.join(columns)
-
+        
         for pattern in self._intf._struct.keys():
             if fnmatch(uri_segment(
                     self._uri.split(self._intf._entry, 1)[1], -2), pattern):
@@ -397,7 +397,7 @@ class EObject(object):
 
     def xpath(self, xpath):
         root = etree.fromstring(self.get())
-
+        print "here"
         return root.xpath(xpath, namespaces=root.nsmap)
 
     def parent(self):
@@ -543,6 +543,7 @@ class CObject(object):
 
             request_shape = uri_shape(
                 '%s/0' % uri.split(self._intf._entry, 1)[1])
+
             reqcache = os.path.join(self._intf._cachedir, 
                                    '%s.struct' % md5name(request_shape)
                                    ).replace('_*', '')
@@ -1119,14 +1120,14 @@ class Project(EObject):
         return 'xnat:projectData'
 
     def experiments(self, id_filter='*'):
-        return Experiments('%s/experiments' % self._intf._entry, 
-                           self._intf, 
+        return Experiments('%s/experiments' % self._intf._entry,
+                           self._intf,  
                            id_filter, 
                            filters={'project':self.id()}
                            )
 
     def experiment(self, ID):
-        return Experiment('%s/experiments/%s' % (self._intf._entry, ID), 
+        return Experiment('%s/experiments/%s' % (self._intf._entry, ID),
                           self._intf
                           )
 
@@ -1138,7 +1139,7 @@ class Project(EObject):
         """
         uri = '%s/subjects?columns=last_modified' % self._uri
 
-        return dict(JsonTable(self._intf._get_json(uri), 
+        return dict(JsonTable(self._intf._get_json(uri),
                               order_by=['ID', 'last_modified']
                               ).select(['ID', 'last_modified']
                                        ).items()
@@ -1261,7 +1262,7 @@ class Subject(EObject):
             -------
             Collection object.
         """
-        return Projects(join_uri(self._uri, 'projects'), 
+        return Projects(join_uri(self._uri, 'projects'),
                         self._intf, id_filter)
 
     def share(self, project):
@@ -1288,6 +1289,43 @@ class Subject(EObject):
 class Experiment(EObject):
     __metaclass__ = ElementType
 
+    
+    def id(self):
+        """ Return the id of this experiment. 
+            
+            For some reason the id() function of the EObject takes a
+            long time to complete and returns False for experiments
+            that exist. This function get the experiment ID directly
+            from the XML and seems to work much faster.
+            
+            Returns
+            -------
+            String
+        """
+        return self.xpath("@ID")
+    
+    def label(self):
+        """ Return the label of this experiment. Queries it directly from the
+            experiment XML. Again for some reason the default label implementation
+            in EObject was not working on the Experiment level.
+        
+            Exceptions
+            ----------
+            An exception is raised more than one attribute call "label" is present
+            in the experiment XML.
+            
+            Returns
+            -------
+            String
+        """    
+        l = self.xpath("@label")
+        if (len(l) == 0):
+            return None
+        elif (len(l) > 1):
+            raise Exception('More than one label in the experiment XML ' + self.get())
+        else:
+            return l[0]
+    
     def shares(self, id_filter='*'):
         """ Returns the projects sharing this experiment.
 
@@ -1295,7 +1333,7 @@ class Experiment(EObject):
             -------
             Collection object.
         """
-        return Projects(join_uri(self._uri, 'projects'), 
+        return Projects(join_uri(self._uri, 'projects'),
                         self._intf, id_filter)
 
     def share(self, project):
@@ -1324,7 +1362,7 @@ class Experiment(EObject):
         self._intf._exec(self._uri+'?triggerPipelines=true', 'PUT')
 
     def fix_scan_types(self):
-        """ Populate empty scan TYPE attributes based on how similar 
+        """ Populate empty scan TYPE attributes based on how similar
             scans were populated.
         """
         self._intf._exec(self._uri+'?fixScanTypes=true', 'PUT')
@@ -1336,7 +1374,7 @@ class Experiment(EObject):
 
     def trigger(self, pipelines=True, fix_types=True, scan_headers=True):
         """ Run several triggers in a single call.
-            
+
             Parameters
             ----------
             pipelines: boolean
@@ -1356,7 +1394,7 @@ class Experiment(EObject):
                 options.append('pullDataFromHeaders=true')
 
             options = '?' + '&'.join(options)
-    
+
             self._intf._exec(self._uri + options, 'PUT')
 
 
@@ -1375,7 +1413,7 @@ class Assessor(EObject):
             -------
             Collection object.
         """
-        return Projects(join_uri(self._uri, 'projects'), 
+        return Projects(join_uri(self._uri, 'projects'),
                         self._intf, id_filter)
 
     def share(self, project):
@@ -1401,7 +1439,7 @@ class Assessor(EObject):
 
     def set_param(self, key, value):
         self.attrs.set('%s/parameters/addParam[name=%s]/addField' \
-                           % (self.datatype(), key), 
+                           % (self.datatype(), key),
                        value
                        )
 
@@ -1415,7 +1453,7 @@ class Reconstruction(EObject):
         self.provenance = Provenance(self)
 
     def datatype(self):
-        return (super(Reconstruction, self).datatype() 
+        return (super(Reconstruction, self).datatype()
                 or 'xnat:reconstructedImageData'
                 )
 
@@ -1424,7 +1462,7 @@ class Scan(EObject):
 
     def set_param(self, key, value):
         self.attrs.set('%s/parameters/addParam[name=%s]/addField' \
-                           % (self.datatype(), key), 
+                           % (self.datatype(), key),
                        value
                        )
 
@@ -1451,11 +1489,11 @@ class Resource(EObject):
             extract: boolean
                 If True, the downloaded zip file is extracted.
                 If False, not extracted.
-                
+
             Returns
             -------
             If extract is False, the zip file path.
-            If extract is True, the list of file paths previously in 
+            If extract is True, the list of file paths previously in
             the zip.
         """
         zip_location = os.path.join(dest_dir, uri_last(self._uri) + '.zip')
@@ -1469,16 +1507,16 @@ class Resource(EObject):
         fzip.extractall(path=dest_dir)
         fzip.close()
 
-        members = []            
+        members = []
 
         for member in fzip.namelist():
             old_path = os.path.join(dest_dir, member)
-            print member
+
             print member.split('files',1)
             new_path = os.path.join(
-                dest_dir, 
+                dest_dir,
                 uri_last(self._uri)
-                
+
                 #, member.split('files', 1)[1].split(os.sep, 2)[2]
                 )
 
@@ -1503,7 +1541,7 @@ class Resource(EObject):
             arcprefix = os.path.commonprefix(members)
             arcroot = '/%s' % os.path.split(arcprefix.rstrip('/'))[1]
             for member in members:
-                fzip.write(member, os.path.join(arcroot, 
+                fzip.write(member, os.path.join(arcroot,
                                                 member.split(arcprefix)[1])
                            )
             fzip.close()
@@ -1524,7 +1562,7 @@ class Resource(EObject):
             the server.
         """
         zip_location = tempfile.mkstemp(suffix='.zip')[1]
-        
+
         arcprefix = os.path.commonprefix(sources)
         arcroot = '/%s' % os.path.split(arcprefix.rstrip('/'))[1]
 
@@ -1540,7 +1578,7 @@ class Resource(EObject):
     def put_zip(self, zip_location, **datatypes):
         """ Uploads a zip or tgz file an then extracts it on the server.
 
-            After the compressed file is extracted the individual 
+            After the compressed file is extracted the individual
             files are accessible separately, or as a whole using get_zip.
         """
         if not self.exists():
@@ -1548,7 +1586,7 @@ class Resource(EObject):
 
         self.file(os.path.split(zip_location)[1] + '?extract=true'
                   ).put(zip_location)
-        
+
     def put_dir(self, src_dir, **datatypes):
         """ Finds recursively all the files in a folder and uploads
             them using `insert`.
@@ -1560,7 +1598,7 @@ class Resource(EObject):
     dir_insert = put_dir
 
     def datatype(self):
-        return (super(Reconstruction, self).datatype() 
+        return (super(Reconstruction, self).datatype()
                 or 'xnat:abstractResource'
                 )
 
@@ -1576,7 +1614,7 @@ class File(EObject):
     __metaclass__ = ElementType
 
     def __init__(self,  uri, interface):
-        """ 
+        """
             Parameters
             ----------
             uri: string
@@ -1585,7 +1623,7 @@ class File(EObject):
         """
 
         EObject.__init__(self,  uri, interface)
-        self._absuri = None        
+        self._absuri = None
 
     def attributes(self):
         """ Files attributes include:
@@ -1601,21 +1639,21 @@ class File(EObject):
             dict : a dictionnary with the file attributes
         """
 
-        return self._getcells(['URI', 'Name', 'Size', 
+        return self._getcells(['URI', 'Name', 'Size',
                                'file_tags', 'file_format', 'file_content'])
 
     def get(self, dest=None, force_default=False):
         """ Downloads the file to the cache directory.
 
             .. note::
-                The default cache path is computed like this: 
+                The default cache path is computed like this:
                 ``path_to_cache/md5(uri + query_string)_filename``
 
             Parameters
             ----------
             dest: string | None
                 - If None a default path in the cache folder is
-                  automatically computed. 
+                  automatically computed.
                 - Else the file is downloaded at the requested location.
             force_default: boolean
                 - Has no effect if the file is downloaded for the first time
@@ -1643,7 +1681,7 @@ class File(EObject):
                 self._intf._http.cache.get_diskpath(
                 '%s%s' % (self._intf._server, self._absuri)
                 )
-                
+
             self._intf._http.cache.preset(_location)
 
         self._intf._exec(self._absuri, 'GET')
@@ -1671,7 +1709,7 @@ class File(EObject):
         if not dest:
             dest = os.path.join(self._intf._http.cache.cache, 'workspace',
                                 *self._absuri.strip('/').split('/')[1:])
-            
+
         if not os.path.exists(os.path.dirname(dest)):
             os.makedirs(os.path.dirname(dest))
 
@@ -1679,7 +1717,7 @@ class File(EObject):
 
         if src != dest:
             shutil.copy2(src, dest)
-            
+
         return dest
 
     def put(self, src, format='U', content='U', tags='U', **datatypes):
@@ -1690,14 +1728,14 @@ class File(EObject):
             src: string
                 Location of the local file to upload or the actual content
                 to upload.
-            format: string   
-                Optional parameter to specify the file format. 
+            format: string
+                Optional parameter to specify the file format.
                 Defaults to 'U'.
             content: string
-                Optional parameter to specify the file content. 
+                Optional parameter to specify the file content.
                 Defaults to 'U'.
             tags: string
-                Optional parameter to specify tags for the file. 
+                Optional parameter to specify tags for the file.
                 Defaults to 'U'.
         """
 
@@ -1722,8 +1760,8 @@ class File(EObject):
 
         content_type = mimetypes.guess_type(path)[0] or \
             'application/octet-stream'
-            
-        body, content_type = httputil.file_message(src, content_type, 
+
+        body, content_type = httputil.file_message(src, content_type,
                                                    path, name
                                                    )
 
@@ -1735,13 +1773,13 @@ class File(EObject):
         resource_id = self._intf.select(guri).id()
 
         self._absuri = urllib.unquote(
-            re.sub('resources/.*?/', 
+            re.sub('resources/.*?/',
                    'resources/%s/' % resource_id, self._uri)
             )
 
         query_args = {
-            'format': format, 
-            'content': content, 
+            'format': format,
+            'content': content,
             'tags': tags,
             }
 
@@ -1754,11 +1792,11 @@ class File(EObject):
             self._absuri,
             '&'.join('%s=%s' % (k,v) for k, v in query_args.items())
             )
-        
+
         # print 'INSERT FILE', os.path.exists(src)
 
         self._intf._exec(
-            put_uri, 'PUT', body, 
+            put_uri, 'PUT', body,
             headers={'content-type':content_type}
             )
 
@@ -1838,7 +1876,7 @@ class Subjects(CObject):
     def sharing(self, projects=[]):
         return Subjects([eobj for eobj in self
                          if set(projects).issubset(eobj.shares().get())
-                         ], 
+                         ],
                         self._intf
                         )
 
@@ -1856,7 +1894,7 @@ class Experiments(CObject):
     def sharing(self, projects=[]):
         return Experiments([eobj for eobj in self
                             if set(projects).issubset(eobj.shares().get())
-                            ], 
+                            ],
                            self._intf
                            )
 
@@ -1874,7 +1912,7 @@ class Assessors(CObject):
     def sharing(self, projects=[]):
         return Assessors([eobj for eobj in self
                           if set(projects).issubset(eobj.shares().get())
-                          ], 
+                          ],
                          self._intf
                          )
 
@@ -1886,36 +1924,94 @@ class Assessors(CObject):
         for eobj in self:
             eobj.unshare(project)
 
-    def download (self, dest_dir, type="ALL",
-                  name=None, extract=False, safe=False):
+
+    def download (self, dest_dir, scan_ids,format=None,name=None,extract=False, safe=False):
         """
         A wrapper around downloadutils.download(..)
         """
-        return downloadutils.download(dest_dir, self, type, name, 
-                                      extract, safe)
-        
+        download_uri = ""
+        if format and format != "ALL":
+            download_uri = "%s/resources/%s/files?format=zip"  % (",".join(scan_ids),format)
+        else:
+            download_uri = "%s/files?format=zip" % (",".join(scan_ids))
+
+        uri = join_uri(self._cbase,download_uri)
+        try:
+            return downloadutils.download(dest_dir,
+                                          name or downloadutils.default_zip_name(self,constraints),
+                                          uri,
+                                          self,
+                                          extract,
+                                          safe)
+        except EnvironmentError, e:
+            return (False, str(e))
+        except Exception, e:
+            return (False, "An unknown error has occured : " + str(e))
+            # if format and format != "ALL":
+                
+                # return (False, '%s %s contain no %s files ' %
+                        # (class_name(self), ','.join(scan_ids), format))
+            # else:
+              #  return (False, 'No %s found matching with ids %s' %
+               #         (class_name(self).lower(), ','.join(scan_ids)))
+
 class Reconstructions(CObject):
     __metaclass__ = CollectionType
-
-    def download (self, dest_dir, type="ALL",
-                  name=None, extract=False, safe=False):
+    
+    def download (self, dest_dir, scan_ids, format=None, name=None, extract=False, safe=False):
         """
         A wrapper around downloadutils.download(..)
         """
-        return downloadutils.download(dest_dir, self, type, name, 
-                                      extract, safe)
+        download_uri = format and \
+            "%s/resources/%s/files?format=zip"  % (",".join(scan_ids),format) \
+            or "%s/files?format=zip" % (",".join(scan_ids))
+
+        uri = join_uri(self._cbase,download_uri)
+        print uri
+        try:
+            return downloadutils.download(dest_dir,
+                                          name or downloadutils.default_zip_name(self,constraints_dict),
+                                          uri,
+                                          self,
+                                          extract,
+                                          safe)
+        except EnvironmentError, e:
+            return (False, str(e))
+        except Exception, e:
+            return (False, "An unknown error has occured : " + str(e))
         
 class Scans(CObject):
     __metaclass__ = CollectionType
 
-    def download (self, dest_dir, type="ALL",
-                  name=None, extract=False, safe=False):
+    def download (self,
+                  dest_dir,
+                  scan_ids,
+                  format=None,
+                  name=None,
+                  extract=False,
+                  safe=False):
         """
         A wrapper around downloadutils.download(..)
         """
-        return downloadutils.download(dest_dir, self, type, name, 
-                                      extract, safe)
-        
+        download_uri = ""
+        if format and format != "ALL":
+            download_uri = "%s/resources/%s/files?format=zip"  % (",".join(scan_ids),format)
+        else:
+            download_uri = "%s/files?format=zip" % (",".join(scan_ids))
+
+        uri = join_uri(self._cbase,download_uri)
+        print uri
+        try:
+            return downloadutils.download(dest_dir,
+                                          name or downloadutils.default_zip_name(self,constraints_dict),
+                                          uri,
+                                          self,
+                                          extract,
+                                          safe)
+        except EnvironmentError, e:
+            return (False, str(e))
+        except Exception, e:
+            return (False, "An unknown error has occured : " + str(e))
 class Resources(CObject):
     __metaclass__ = CollectionType
 
@@ -1959,7 +2055,7 @@ def query_with(interface, join_field,
     return interface.select(*_stm).where(_cls)
 
 
-def rewrite_query(interface, join_field, 
+def rewrite_query(interface, join_field,
                   common_field, _filter):
 
     _new_filter = []
@@ -1974,7 +2070,7 @@ def rewrite_query(interface, join_field,
             _res = interface.select(
                 _datatype, ['%s/%s' % (_datatype, common_field)]
                 ).where([_f, 'AND'])
-            
+
             _new_f = [(join_field, '=', '%s' % sid)
                       for sid in _res['subject_id']
                       ]

@@ -75,7 +75,7 @@ class Interface(object):
                 downloaded files)
                 If no path is provided, a platform dependent temp dir is 
                 used.
-v           config: string
+           config: string
                Reads a config file in json to get the connection parameters.
                If a config file is specified, it will be used regardless of
                other parameters that might have been given.
@@ -215,14 +215,12 @@ v           config: string
             headers: dict
                 Additional headers for the HTTP request.
         """
-
         if headers is None:
             headers = {}
 
         self._get_entry_point()
 
         uri = join_uri(self._server, uri)
-
         if DEBUG:
             print uri
         # using session authentication
@@ -232,9 +230,8 @@ v           config: string
         # reset the memcache when client changes something on the server
         if method in ['PUT', 'DELETE']:
             self._memcache = {}
-        
+            
         if self._mode == 'online' and method == 'GET':
-
             if time.time() - self._memcache.get(uri, 0) < self._memtimeout:
                 if DEBUG:
                     print 'send: GET CACHE %s' % uri
@@ -245,9 +242,8 @@ v           config: string
                 self._memcache[uri] = time.time()
                 response = None
             else:
-                response, content = self._http.request(uri, method, 
-                                                       body, headers)
-                self._memcache[uri] = time.time()
+               response, content = self._http.request(uri, method, body, headers)
+               self._memcache[uri] = time.time()
 
         elif self._mode == 'offline' and method == 'GET':
 
@@ -300,7 +296,6 @@ v           config: string
                                                            response.reason
                                                            )
                                              )
-
         if is_xnat_error(content):
             catch_error(content)
 
@@ -330,7 +325,7 @@ v           config: string
                 uri += '?format=csv'
 
         content = self._exec(uri, 'GET')
-        
+
         if is_xnat_error(content):
             catch_error(content)
 

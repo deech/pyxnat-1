@@ -99,7 +99,6 @@ def get_selection(jdata, columns):
 def csv_to_json(csv_str):
     csv_reader = csv.reader(StringIO(csv_str), delimiter=',', quotechar='"')
     headers = csv_reader.next()
-
     return [dict(zip(headers, entry)) for entry in csv_reader]
 
 

@@ -1,7 +1,7 @@
 
 # REST collection resources tree
 resources_tree = {
-            'projects'        :['subjects', 'resources'],
+            'projects'        :['subjects', 'resources','experiments'],
             'subjects'        :['experiments', 'resources'],
             'experiments'     :['assessors', 'reconstructions', 'scans', 'resources'],
             'assessors'       :['resources', 'in_resources','out_resources'],
