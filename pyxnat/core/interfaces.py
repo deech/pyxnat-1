@@ -4,8 +4,8 @@ import tempfile
 import email
 import getpass
 
-from ..externals import httplib2
-from ..externals import simplejson as json
+import httplib2
+import json
 
 from .select import Select
 from .cache import CacheManager, HTCache
@@ -16,6 +16,7 @@ from .jsonutil import csv_to_json
 from .errors import is_xnat_error
 from .errors import catch_error
 from .array import ArrayData
+from .xpath_store import XpathStore
 from . import xpass
 
 
@@ -152,6 +153,7 @@ class Interface(object):
         self.array = ArrayData(self)
         self.cache = CacheManager(self)
         self.manage = GlobalManager(self)
+        self.xpath = XpathStore(self)
         
         if _DRAW_GRAPHS:
             self._get_graph = GraphData(self)
@@ -176,6 +178,8 @@ class Interface(object):
                 if not '/data/JSESSION' in e.message:
                     raise e
             
+        return self._entry
+
     def _connect(self, **kwargs):
         """ Sets up the connection with the XNAT server.
 
@@ -192,6 +196,8 @@ class Interface(object):
         else:
             kwargs = self._connect_extras
         
+        kwargs['disable_ssl_certificate_validation'] = True
+
         if DEBUG:   
             httplib2.debuglevel = 2
         self._http = httplib2.Http(HTCache(self._cachedir, self), **kwargs)
@@ -332,7 +338,8 @@ class Interface(object):
         return csv_to_json(content)
 
     def _get_head(self, uri):
-        print 'GET HEAD'
+        if DEBUG:
+            print 'GET HEAD'
         _nocache = httplib2.Http()
         _nocache.add_credentials(self._user, self._pwd)
 

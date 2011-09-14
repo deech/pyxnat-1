@@ -54,7 +54,7 @@ def expand_level(element, fullpath):
                     paths.extend(look_again)
                 else:
                     path.reverse()
-                    paths.append('/'+'/'.join(path))
+                    paths.append('/' + '/'.join(path))
 
         return paths
 
@@ -68,15 +68,15 @@ def expand_level(element, fullpath):
         return absolute_paths
     else:
         for i in range(1, 4):
-            if is_type_level(els[index-i]) or is_expand_level(els[index-i]):
-                parent_level = els[index-i]
+            if is_type_level(els[index - i]) or is_expand_level(els[index - i]):
+                parent_level = els[index - i]
                 break
-            
+
     if parent_level.strip('/') in schema.resources_singular:
         parent_level += 's'
 
     return [abspath.split(parent_level)[1]
-            for abspath in absolute_paths 
+            for abspath in absolute_paths
             if parent_level in abspath]
 
 def mtransform(paths):
@@ -89,8 +89,8 @@ def mtransform(paths):
 
         for i, curr_el in enumerate(els):
 
-            if i+1 < len(els):
-                next_el = els[i+1]
+            if i + 1 < len(els):
+                next_el = els[i + 1]
             else:
                 next_el = None
 
@@ -101,7 +101,7 @@ def mtransform(paths):
                         tels.append(curr_el)
                         tels.append('/*')
                     else:
-                        tels.append(curr_el+'s')
+                        tels.append(curr_el + 's')
                         tels.append('/*')
                 else:
                     if not is_singular_type_level(curr_el):
@@ -113,11 +113,11 @@ def mtransform(paths):
                         if not is_wildid_level(next_el):
                             tels.append(curr_el)
                         else:
-                            tels.append(curr_el+'s')        
+                            tels.append(curr_el + 's')
 
             elif is_expand_level(curr_el):
 
-                exp_paths = [''.join(els[:i] + [rel_path] + els[i+1:])
+                exp_paths = [''.join(els[:i] + [rel_path] + els[i + 1:])
                              for rel_path in expand_level(curr_el, path)
                              ]
 
@@ -141,7 +141,7 @@ def group_paths(paths):
 
     for path in paths:
         resources = [el
-                     for el in re.findall('/{1,2}.*?(?=/{1,2}|$)', path) 
+                     for el in re.findall('/{1,2}.*?(?=/{1,2}|$)', path)
                      if el.strip('/') in schema.resources_types \
                          and el.strip('/') not in ['files', 'file']
                      ]
@@ -154,9 +154,9 @@ def group_paths(paths):
             if alt_path.endswith(path):
 
                 alt_rsc = \
-                    [el for el in re.findall('/{1,2}.*?(?=/{1,2}|$)', 
+                    [el for el in re.findall('/{1,2}.*?(?=/{1,2}|$)',
                                              alt_path
-                                             ) 
+                                             )
                      if el.strip('/') in schema.resources_types \
                          and el.strip('/') not in ['files', 'file']
                      ]
@@ -176,7 +176,7 @@ def group_paths(paths):
 def compute(path):
     if not re.match('/project(s)?|//.+', path):
         path = '/' + path
- 
+
     path = inv_translate_uri(path)
 
     try:
@@ -210,7 +210,7 @@ class Select(object):
                 >>> interface.select('/projects/myproj/subjects').get()
 
             Select with a datatype:
-                >>> columns = ['xnat:subjectData/PROJECT', 
+                >>> columns = ['xnat:subjectData/PROJECT',
                                'xnat:subjectData/SUBJECT_ID'
                                ]
                 >>> criteria = [('xnat:subjectData/SUBJECT_ID', 'LIKE', '*'),
@@ -220,7 +220,7 @@ class Select(object):
                             ).where(criteria)
     """
     def __init__(self, interface):
-        """ 
+        """
             Parameters
             ----------
             interface: :class:`Interface`
@@ -302,14 +302,14 @@ class Select(object):
             ----------
             datatype_or_path: string
                 Can either be a resource path or a datatype:
-                    - when a path, REST resources are returned, the 
+                    - when a path, REST resources are returned, the
                       `columns` argument is useless.
                     - when a datatype, a search Object is returned,
                       the `columns` argument has to be specified.
             columns: list
                 List of fieldtypes e.g. xnat:subjectData/SUBJECT_ID
-                Datatype and columns are used to specify the search table 
-                that has to be returned. Use the method `where` on the 
+                Datatype and columns are used to specify the search table
+                that has to be returned. Use the method `where` on the
                 `Search` object to trigger a search on the database.
         """
         self._intf._get_entry_point()
@@ -340,14 +340,14 @@ class Select(object):
                     # # in case a level id has a / - allowed for files only
                     # if len(path.split('/')[1:]) % 2 == 1 \
                     #         and uri_last(path) not in schema.resources_types:
-                        
+
                     #     pairs[-1] = (pairs[-1][0], uri_last(path))
 
                     obj = self
                     for resource, identifier in pairs:
 
                         if isinstance(obj, list):
-                            obj = [getattr(sobj, resource)(identifier) 
+                            obj = [getattr(sobj, resource)(identifier)
                                    for sobj in obj]
                         else:
                             obj = getattr(obj, resource)(identifier)

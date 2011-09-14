@@ -1,5 +1,5 @@
 
-* Add some in-code comments on the inner workings of the module
+* Add some in-code comments on the inner workings of the mod	ule
 
 * Support current reserved keywords as resource identifiers
 
@@ -14,5 +14,13 @@
   - provenance
   - templates
 
-* Add arbitrary scan data on the nosetests project on central to augment the
-  tests for the global scan listing function
+* Seems to be a bug in select('/project/PROJ//files') syntax
+
+* bug in provenance? --> bug with the allowDataDeletion flag
+
+* BUG: have to go to the dropdown menu of custom variables before being 
+  able to add custom variables
+
+* BUG in manage.schemas.add?
+
+* check ex2rst in pymvpa.tools to generate sphinx from example scripts

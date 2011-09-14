@@ -47,7 +47,7 @@ ____
 
 """
 
-__version__ = '0.8.0'
+__version__ = '0.9.0dev'
 
 from .core import Interface
 from .core import SearchManager
@@ -67,3 +67,4 @@ from .core import users
 from .core import jsonutil
 from .core import uriutil
 from .core import xpass
+from .core import xpath_store

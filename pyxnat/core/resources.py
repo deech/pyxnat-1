@@ -12,7 +12,7 @@ import urllib
 import codecs
 from fnmatch import fnmatch
 
-from ..externals import simplejson as json
+import json
 from lxml import etree
 
 from .uriutil import join_uri, translate_uri, uri_segment
@@ -29,9 +29,11 @@ from .errors import is_xnat_error, parse_put_error_message
 from .errors import DataError, ProgrammingError, catch_error
 from .cache import md5name
 from .provenance import Provenance
+# from .pipelines import Pipelines
 from . import schema
 from . import httputil
 from . import downloadutils
+
 
 DEBUG = False
 
@@ -399,6 +401,9 @@ class EObject(object):
         root = etree.fromstring(self.get())
         print "here"
         return root.xpath(xpath, namespaces=root.nsmap)
+
+    def namespaces(self):
+        pass
 
     def parent(self):
         uri = uri_grandparent(self._uri)
@@ -965,6 +970,18 @@ class CObject(object):
 class Project(EObject):
     __metaclass__ = ElementType
     
+    def __init__(self,  uri, interface):
+        """ 
+            Parameters
+            ----------
+            uri: string
+                The file resource URI
+            interface: Interface Object
+        """
+
+        EObject.__init__(self,  uri, interface)
+        # self.pipelines = Pipelines(self.id(), self._intf)
+
     def prearchive_code(self):
         """ Gets project prearchive code.
         """
@@ -1145,14 +1162,14 @@ class Project(EObject):
                                        ).items()
                     )
 
-    def add_custom_variables(self, custom_variables, allowDataDeletion=False):
+    def add_custom_variables(self, custom_variables, allow_data_deletion=False):
         """Adds a custom variable to a specified group
 
         Parameters
         ----------
 
         custom_variables: a dictionary
-        allowDataDeletion : a boolean
+        allow_data_deletion : a boolean
 
         Examples
         --------
@@ -1163,63 +1180,87 @@ class Project(EObject):
         """
         tree = lxml.etree.fromstring(self.get())
         update = False
+
         for protocol, value in custom_variables.items():
             try:
-                protocol_element = tree.xpath("//xnat:studyProtocol[@name='%s']"%protocol,
-                                          namespaces=tree.nsmap).pop()
+                protocol_element = tree.xpath(
+                    "//xnat:studyProtocol[@name='%s']" % protocol,
+                    namespaces=tree.nsmap).pop()
+
             except IndexError:
-                raise ValueError('Protocol %s not in current schema'%protocol)
+                raise ValueError(
+                    'Protocol %s not in current schema' % protocol
+                    )
+
             try:
-                definitions_element = protocol_element.xpath('xnat:definitions',
-                                                         namespaces = tree.nsmap).pop()
+                definitions_element = protocol_element.xpath(
+                    'xnat:definitions', namespaces = tree.nsmap).pop()
             except IndexError:
                 update = True
-                definitions_element = lxml.etree.Element(lxml.etree.QName(tree.nsmap['xnat'],
-                                                                    'definitions'),
-                                                         nsmap = tree.nsmap)
+                definitions_element = lxml.etree.Element(
+                    lxml.etree.QName(tree.nsmap['xnat'],'definitions'),
+                    nsmap=tree.nsmap
+                    )
                 protocol_element.append(definitions_element)
+
             for group, fields in value.items():
                 try:
-                    group_element = definitions_element.xpath("xnat:definition[@ID='%s']"%group,
-                                                              namespaces = tree.nsmap).pop()
-                    fields_element = group_element.xpath("xnat:fields",
-                                                         namespaces = tree.nsmap).pop()
+                    group_element = definitions_element.xpath(
+                        "xnat:definition[@ID='%s']" % group,
+                        namespaces = tree.nsmap).pop()
+
+                    fields_element = group_element.xpath(
+                        "xnat:fields",
+                        namespaces = tree.nsmap).pop()
                 except IndexError:
                     update = True
-                    group_element = lxml.etree.Element(lxml.etree.QName(tree.nsmap['xnat'],
-                                                                        'definition'),
-                                                       nsmap = tree.nsmap)
+                    group_element = lxml.etree.Element(
+                        lxml.etree.QName(tree.nsmap['xnat'],'definition'),
+                        nsmap = tree.nsmap
+                        )
                     group_element.set('ID', group)
-                    group_element.set('data-type', protocol_element.get('data-type'))
+                    group_element.set(
+                        'data-type', protocol_element.get('data-type'))
                     group_element.set('description','')
                     group_element.set('project-specific','1')
                     definitions_element.append(group_element)
-                    fields_element = lxml.etree.Element(lxml.etree.QName(tree.nsmap['xnat'],
-                                                                        'fields'),
-                                                       nsmap = tree.nsmap)
+                    fields_element = lxml.etree.Element(
+                        lxml.etree.QName(tree.nsmap['xnat'],'fields'),
+                        nsmap = tree.nsmap
+                        )
                     group_element.append(fields_element)
+
                 for field, datatype in fields.items():
                     try:
-                        field_element = fields_element.xpath("xnat:field[@name='%s']"%field,
-                                                              namespaces = tree.nsmap).pop()
+                        field_element = fields_element.xpath(
+                            "xnat:field[@name='%s']" % field,
+                            namespaces = tree.nsmap).pop()
                     except IndexError:
-                        field_element = lxml.etree.Element(lxml.etree.QName(tree.nsmap['xnat'],
-                                                                        'field'),
-                                                           nsmap = tree.nsmap)
+                        field_element = lxml.etree.Element(
+                            lxml.etree.QName(tree.nsmap['xnat'],'field'),
+                            nsmap = tree.nsmap)
                         field_element.set('name', field)
                         field_element.set('datatype', datatype)
                         field_element.set('type', 'custom')
                         field_element.set('required', '0')
-                        field_element.set('xmlPath', "xnat:%s/fields/field[name=%s]/field"%(protocol_element.get('data-type').split(':')[-1], field))
+                        field_element.set(
+                            'xmlPath', 
+                            "xnat:%s/fields/field[name=%s]/field" % (
+                                protocol_element.get(
+                                    'data-type').split(':')[-1], field)
+                            )
                         fields_element.append(field_element)
                         update = True
         if update:
-            body, content_type = httputil.file_message(lxml.etree.tostring(tree),
-                                                       'text/xml',
-                                                       'cust.xml',
-                                                       'cust.xml')
+            body, content_type = httputil.file_message(
+                lxml.etree.tostring(tree),
+                'text/xml',
+                'cust.xml',
+                'cust.xml'
+                )
+
             uri = self._uri
-            if allowDataDeletion:
+            if allow_data_deletion:
                 uri = self._uri + '?allowDataDeletion=true'
             self._intf._exec(uri, method='PUT', body=body,
                              headers= {'content-type':content_type})
@@ -1235,17 +1276,24 @@ class Project(EObject):
         custom_variables = {}
         for studyprotocols in tree.xpath('//xnat:studyProtocol',
                                          namespaces=nsmap):
+
             protocol_name = studyprotocols.get('name')
             custom_variables[protocol_name] = {}
-            for definition in studyprotocols.xpath('xnat:definitions/xnat:definition',
+
+            for definition in studyprotocols.xpath(('xnat:definitions'
+                                                    '/xnat:definition'),
                                                    namespaces=nsmap):
+
                 definition_id = definition.get('ID')
                 custom_variables[protocol_name][definition_id] = {}
                 for field in definition.xpath('xnat:fields/xnat:field',
                                               namespaces=nsmap):
+
                     field_name = field.get('name')
                     if field.get('type') == 'custom':
-                        custom_variables[protocol_name][definition_id][field_name] = field.get('datatype')
+                        custom_variables[protocol_name][definition_id][
+                            field_name] = field.get('datatype')
+
         return custom_variables
 
 
@@ -1443,6 +1491,16 @@ class Assessor(EObject):
                        value
                        )
 
+    def get_param(self, key):
+        return self.xpath(
+            "//xnat:addParam[@name='%s']/child::text()" % key)[-1]     
+
+    def get_params(self):
+        return self.xpath("//xnat:addParam/child::text()")[1::2]
+    
+    def params(self):
+        return self.xpath('//xnat:addParam/attribute::*')
+
 
 class Reconstruction(EObject):
     __metaclass__ = ElementType
@@ -1465,6 +1523,17 @@ class Scan(EObject):
                            % (self.datatype(), key),
                        value
                        )
+
+    def get_param(self, key):
+        return self.xpath(
+            "//xnat:addParam[@name='%s']/child::text()" % key)[-1]     
+
+    def get_params(self):
+        return self.xpath("//xnat:addParam/child::text()")[1::2]
+    
+    def params(self):
+        return self.xpath('//xnat:addParam/attribute::*')
+
 
 
 class Resource(EObject):
@@ -1745,16 +1814,13 @@ class File(EObject):
 
         try:
             if os.path.exists(src):
-                print 'exists'
                 path = src
                 name = os.path.basename(path).split('?')[0]
                 src = codecs.open(src).read()
             else:
-                print 'not exists'
                 path = self._uri.split('/')[-1]
                 name = path
         except:
-            print 'exception'
             path = self._uri.split('/')[-1]
             name = path
 
@@ -1927,7 +1993,7 @@ class Assessors(CObject):
 
     def download (self, dest_dir, scan_ids,format=None,name=None,extract=False, safe=False):
         """
-        A wrapper around downloadutils.download(..)
+        A wrapper around :func:`downloadutils.download`
         """
         download_uri = ""
         if format and format != "ALL":
@@ -1960,7 +2026,7 @@ class Reconstructions(CObject):
     
     def download (self, dest_dir, scan_ids, format=None, name=None, extract=False, safe=False):
         """
-        A wrapper around downloadutils.download(..)
+        A wrapper around :func:`downloadutils.download`
         """
         download_uri = format and \
             "%s/resources/%s/files?format=zip"  % (",".join(scan_ids),format) \
@@ -1991,7 +2057,8 @@ class Scans(CObject):
                   extract=False,
                   safe=False):
         """
-        A wrapper around downloadutils.download(..)
+        A wrapper around :func:`downloadutils.download`
+
         """
         download_uri = ""
         if format and format != "ALL":

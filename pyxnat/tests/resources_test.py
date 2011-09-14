@@ -4,13 +4,11 @@ import platform
 import tempfile
 from uuid import uuid1
 
-from ..pyxnat import Interface
+from .. import Interface
 
 _modulepath = os.path.dirname(os.path.abspath(__file__))
 
-central = Interface('http://sandbox.xnat.org/xnat', 'testuser', 'testuser')
-
-# central = Interface('http://sandbox.xnat.org', 'schwarty', 'plopplop')
+central = Interface('https://central.xnat.org', 'nosetests', 'nosetests')
 
 _id_set1 = {
     'sid':uuid1().hex,
@@ -60,7 +58,7 @@ def test_reconstruction_create():
     assert reco_1.exists()
 
 def test_provenance():
-    reco_1.provenance.attach({'program':'nosetests'})
+    reco_1.provenance.set({'program':'nosetests'})
     assert reco_1.provenance.get()[0]['program'] == 'nosetests'
 
 def test_multi_create():
