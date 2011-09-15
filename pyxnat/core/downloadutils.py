@@ -141,7 +141,6 @@ def download (dest_dir, zip_name, uri, instance=None,extract=False, overwrite=Fa
 
     zip_location = os.path.join(dest_dir, zip_name + '.zip')
 
-    print overwrite
     if not overwrite:
         if os.path.exists(zip_location):
             raise EnvironmentError("Unable to download to " + zip_location + " because this file already exists.")
@@ -149,7 +148,6 @@ def download (dest_dir, zip_name, uri, instance=None,extract=False, overwrite=Fa
     # Download from the server
     try:
         instance._intf._http.cache.preset(zip_location)
-        print uri
         instance._intf._exec(uri)
         # Extract the archive
         fzip = zipfile.ZipFile(zip_location,'r')
@@ -167,9 +165,7 @@ def download (dest_dir, zip_name, uri, instance=None,extract=False, overwrite=Fa
             fzip.close()
             return (True,zip_location)
     except EnvironmentError, e:
-        print e
         raise e
     except Exception, e:
-        print e
         raise e
         

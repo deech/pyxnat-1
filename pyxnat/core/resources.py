@@ -399,7 +399,6 @@ class EObject(object):
 
     def xpath(self, xpath):
         root = etree.fromstring(self.get())
-        print "here"
         return root.xpath(xpath, namespaces=root.nsmap)
 
     def namespaces(self):
@@ -2033,7 +2032,6 @@ class Reconstructions(CObject):
             or "%s/files?format=zip" % (",".join(scan_ids))
 
         uri = join_uri(self._cbase,download_uri)
-        print uri
         try:
             return downloadutils.download(dest_dir,
                                           name or downloadutils.default_zip_name(self,constraints_dict),
