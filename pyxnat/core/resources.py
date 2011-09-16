@@ -2027,11 +2027,13 @@ class Reconstructions(CObject):
         """
         A wrapper around :func:`downloadutils.download`
         """
-        download_uri = format and \
-            "%s/resources/%s/files?format=zip"  % (",".join(scan_ids),format) \
-            or "%s/files?format=zip" % (",".join(scan_ids))
-
+        download_uri = ""
+        if format and format != "ALL":
+            download_uri = "%s/resources/%s/files?format=zip"  % (",".join(scan_ids),format)
+        else:
+            download_uri = "%s/files?format=zip" % (",".join(scan_ids))
         uri = join_uri(self._cbase,download_uri)
+        
         try:
             return downloadutils.download(dest_dir,
                                           name or downloadutils.default_zip_name(self,constraints_dict),
@@ -2065,7 +2067,6 @@ class Scans(CObject):
             download_uri = "%s/files?format=zip" % (",".join(scan_ids))
 
         uri = join_uri(self._cbase,download_uri)
-        print uri
         try:
             return downloadutils.download(dest_dir,
                                           name or downloadutils.default_zip_name(self,constraints_dict),

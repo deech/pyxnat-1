@@ -68,3 +68,5 @@ from .core import jsonutil
 from .core import uriutil
 from .core import xpass
 from .core import xpath_store
+from .core import errors
+

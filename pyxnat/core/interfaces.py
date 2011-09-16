@@ -174,10 +174,13 @@ class Interface(object):
 
                 if is_xnat_error(self._jsession):
                     catch_error(self._jsession)
-            except Exception, e:
-                if not '/data/JSESSION' in e.message:
+            except httplib2.ServerNotFoundError as e:
+                raise e
+            except Exception as e:
+                if not '/data/JSESSION' in str(e):
                     raise e
-            
+                else:
+                    self._jsession = self._exec("/REST/JSESSION")
         return self._entry
 
     def _connect(self, **kwargs):
@@ -223,7 +226,7 @@ class Interface(object):
         """
         if headers is None:
             headers = {}
-
+            
         self._get_entry_point()
 
         uri = join_uri(self._server, uri)
