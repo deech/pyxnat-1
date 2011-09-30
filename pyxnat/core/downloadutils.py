@@ -146,26 +146,20 @@ def download (dest_dir, zip_name, uri, instance=None,extract=False, overwrite=Fa
             raise EnvironmentError("Unable to download to " + zip_location + " because this file already exists.")
 
     # Download from the server
-    try:
-        instance._intf._http.cache.preset(zip_location)
-        instance._intf._exec(uri)
-        # Extract the archive
-        fzip = zipfile.ZipFile(zip_location,'r')
-        if extract:
-            check = {'run': lambda f, d: not os.path.exists(os.path.join(dest_dir,f)),
-                     'desc': 'File does not exist in the parent directory'}                                     
-            safeUnzip = lambda: unzip(fzip, dest_dir, check) if not overwrite else lambda:unzip(fzip,dest_dir)
-            (unzipped, paths) = safeUnzip()()
-            if not unzipped:
-                fzip.close()
-                raise EnvironmentError("Unable to extract " + zip_location + " because file " + paths + " failed the following test: " + check['desc'])
-            else:
-                return (True, paths)
-        else:
+    instance._intf._http.cache.preset(zip_location)
+    instance._intf._exec(uri)
+    # Extract the archive
+    fzip = zipfile.ZipFile(zip_location,'r')
+    if extract:
+        check = {'run': lambda f,d: not os.path.exists(os.path.join(d,f)),
+                 'desc': 'File exists.'}                                     
+        safeUnzip = lambda: unzip(fzip,dest_dir,check) if not overwrite else lambda:unzip(fzip,dest_dir)
+        (unzipped, paths) = safeUnzip()
+        if not unzipped:
             fzip.close()
-            return (True,zip_location)
-    except EnvironmentError, e:
-        raise e
-    except Exception, e:
-        raise e
-        
+            raise EnvironmentError("Unable to extract " + zip_location + " because file " + paths + " : " + check['desc'])
+        else:
+            return (True, paths)
+    else:
+        fzip.close()
+        return (True,zip_location)

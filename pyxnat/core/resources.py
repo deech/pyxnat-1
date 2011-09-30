@@ -1,5 +1,6 @@
 from __future__ import with_statement
 
+import traceback
 import lxml
 import os
 import re
@@ -2077,6 +2078,7 @@ class Scans(CObject):
         except EnvironmentError, e:
             return (False, str(e))
         except Exception, e:
+            print traceback.print_exc()
             return (False, "An unknown error has occured : " + str(e))
 class Resources(CObject):
     __metaclass__ = CollectionType
