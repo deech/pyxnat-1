@@ -20,8 +20,9 @@ from .uriutil import join_uri, translate_uri, uri_segment
 from .uriutil import uri_last, uri_nextlast
 from .uriutil import uri_parent, uri_grandparent
 from .uriutil import uri_shape
-from .schema import class_name
+from .uriutil import file_path
 
+from .schema import class_name
 from .jsonutil import JsonTable, get_selection
 from .pathutil import find_files
 from .attributes import EAttrs
@@ -1674,8 +1675,18 @@ class Resource(EObject):
 class In_Resource(Resource):
     __metaclass__ = ElementType
 
+    def parent(self):
+        uri = uri_grandparent(self._uri)
+        Klass = globals()[uri.split('/')[-3].title().rsplit('s', 1)[0]]
+        return Klass(uri_parent(uri), self._intf)
+
 class Out_Resource(Resource):
     __metaclass__ = ElementType
+
+    def parent(self):
+        uri = uri_grandparent(self._uri)
+        Klass = globals()[uri.split('/')[-3].title().rsplit('s', 1)[0]]
+        return Klass(uri_parent(uri), self._intf)
 
 class File(EObject):
     """ EObject for files stored in XNAT.
@@ -1692,13 +1703,20 @@ class File(EObject):
         """
 
         EObject.__init__(self,  uri, interface)
-        self._absuri = None
+        self._urn = file_path(uri)
+        self._absuri = None        
+
+    def __repr__(self):
+        return '<%s Object> %s' % (self.__class__.__name__, 
+                                   self._urn
+                                   )
 
     def attributes(self):
         """ Files attributes include:
                 - URI
                 - Name
                 - Size in bytes
+                - path (relative to the parent resource)
                 - file_tags
                 - file_format
                 - file_content
@@ -1708,7 +1726,7 @@ class File(EObject):
             dict : a dictionnary with the file attributes
         """
 
-        return self._getcells(['URI', 'Name', 'Size',
+        return self._getcells(['URI', 'Name', 'Size', 'path', 
                                'file_tags', 'file_format', 'file_content'])
 
     def get(self, dest=None, force_default=False):
@@ -1924,6 +1942,19 @@ class File(EObject):
         """ Gets the file content description.
         """
         return self._getcell('file_content')
+
+    def last_modified(self):
+        """ Gets the file last-modified date.
+        """
+
+        if not self._absuri:
+            self._absuri = self._getcell('URI')
+
+        if self._absuri is None:
+            raise DataError('Cannot get file: does not exists')
+
+        info = self._intf._get_head(self._absuri)
+        return info['last-modified']
 
 
 class In_File(File):
